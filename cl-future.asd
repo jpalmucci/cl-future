@@ -2,7 +2,8 @@
 
 (defpackage future
   (:use :cl)
-  (:export #:terminate-children #:future #:get-future-value #:future-mapcar))
+  (:export #:terminate-children #:future #:get-future-value #:future-mapcar
+	   #:*total-slaves*))
 
 (defvar *future-path* *load-truename*)
 

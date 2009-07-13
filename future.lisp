@@ -4,7 +4,7 @@
   "Are we currently running in a slave process?")
 
 (defvar *total-slaves* 3
-  "The max number of running slave processes")
+  "The maximum number of slaves to run at any one time.")
 
 (defvar *futures-awaiting-status* (make-hash-table :test #'eql)
   "This table contains those futures that we haven't noticed have terminated yet.
@@ -110,24 +110,29 @@ When wait comes around and reaps them, we remove them from the table"
 		 (make-instance 'future :pid pid))))))
   
 (defmacro future (&body body)
+  "Evaluate expr in parallel using a forked child process. Returns a
+'future' object whose value can be retrieved using
+get-future-value. No side-effects made in <expr> will be visible from
+the calling process."
   `(execute-future #'(lambda () ,@body)))
 
-(defun get-future-value (f &key (clean-up t))
-  (cond ((null f) nil)
-	((listp f)
-	 (cons (get-future-value (car f) :clean-up clean-up)
-	       (get-future-value (cdr f) :clean-up clean-up)))
-	((eq (class-name (class-of f)) 'future)
-	 (with-slots (pid result code) f
+(defun get-future-value (expr &key (clean-up t))
+"walk the list structure 'expr', replacing any futures with their
+evaluated values. Blocks if a future is still running."
+  (cond ((null expr) nil)
+	((listp expr)
+	 (cons (get-future-value (car expr) :clean-up clean-up)
+	       (get-future-value (cdr expr) :clean-up clean-up)))
+	((eq (class-name (class-of expr)) 'future)
+	 (with-slots (pid result code) expr
 	   (loop while (eq result 'unbound)
 	      do (wait-for-one-slave))
 	   (return-from get-future-value result)))
 	(t
-	 f)))
+	 expr)))
 	
 (defun future-mapcar (fn list &key (chunk-size 1))
   (let ((futures (mapcar #'(lambda (x)
 			     (future (funcall fn x)))
 			 list)))
     (mapcar #'get-future-value futures)))
-
