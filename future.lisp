@@ -59,7 +59,7 @@ When wait comes around and reaps them, we remove them from the table"
       
 	
 (defun terminate-children ()
-  "Kill all currently runnint children"
+  "Kill all currently running children."
   (maphash #'(lambda (key value)
 	       (with-slots (pid result code) value
 		 (ignore-errors (nix:kill (pid value) 9))

@@ -15,6 +15,10 @@
 			 (if (find-package 'swank)
 			     (load (make-pathname :name "future-swank"
 						  :type "lisp"
+						  :defaults *future-path*)))
+			 (if (find-package 'clsql)
+			     (load (make-pathname :name "future-clsql"
+						  :type "lisp"
 						  :defaults *future-path*)))))
 
    

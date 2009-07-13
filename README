@@ -9,3 +9,5 @@ Interface:
 (get-future-value <expr>): walk the list structure "expr", replacing any futures with their evaluated values. Blocks if a future is still running.
 
 *total-slaves*: The maximum number of slaves to run at any one time.
+
+(terminate-children): Kill all currently running children.
