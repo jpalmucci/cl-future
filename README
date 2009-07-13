@@ -1,0 +1,9 @@
+Cl-future is a simple way to achieve parallelism for common lisp on multiprocessor shared memory Unix machines. 
+
+Cl-future requires the most recent version of Osicat. For that reason, we recommend you use repo-install to install it.
+
+Interface:
+
+(future <expr>): evaluate expr in parallel using a forked child process. Returns a "future" object whose value can be retrieved using get-future-value. No side-effects made in <expr> will be visible from the calling process. 
+
+(get-future-value <expr>): walk the list structure "expr", replacing any futures with their evaluated values. Blocks if a future is still running.
