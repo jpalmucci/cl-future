@@ -6,7 +6,7 @@
 
 (defvar *future-path* *load-truename*)
 
-(defsystem future 
+(defsystem cl-future 
   :depends-on (osicat cl-store)
   :components 
   ((:file "future"))
