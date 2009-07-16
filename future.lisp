@@ -14,6 +14,13 @@ When wait comes around and reaps them, we remove them from the table"
 (defvar *spawn-child-hooks* nil
   "List of functions that are executed in a newly spawned child before anything else is done")
 
+
+(defun fork ()
+  "We need to handle for differently in different lisps"
+  #+sbcl
+  (return-from fork (sb-posix:fork))
+  (nix:fork))
+  
 (defclass future ()
     ((pid :initarg :pid
 	  :reader pid
@@ -63,7 +70,7 @@ When wait comes around and reaps them, we remove them from the table"
   (maphash #'(lambda (key value)
 	       (with-slots (pid result code) value
 		 (ignore-errors (nix:kill (pid value) 9))
-		 (setf result (make-instance 'error :format-control "Future killed by terminate-children")
+		 (setf result (make-condition 'simple-error :format-control "Future killed by terminate-children")
 		       code 1)))
 	   *futures-awaiting-status*)
   ;; reap them so they don't confuse us later on 
@@ -77,34 +84,39 @@ When wait comes around and reaps them, we remove them from the table"
 	 (return-from execute-future 
 	   (make-instance 'future :pid nil :result (funcall fn)))))
   (wait-for-slave)
-  (let ((pid (excl.osi:fork)))
+  (let ((pid (fork)))
     (cond ((eql pid 0)
 	   ;; we are the child - evaluate the expression and write it to disk
 	   (mapc #'funcall *spawn-child-hooks*)
-	   (let* ((in (make-string-input-stream ""))
+
+	   (let* ((in  (make-string-input-stream ""))
 		  (out (make-string-output-stream))
 		  (tw (make-two-way-stream in out))
-		  (output-pathname (format nil "/tmp/pid.~d" (nix:getpid)))
-		  (*is-slave* t)
-		  (*standard-input* in)
-		  (*standard-output* out)
-		  (*error-output* out)
-		  (*trace-output* out)
-		  (*terminal-io* tw)
-		  (*debug-io* tw)
-		  (*query-io* tw)
-		  )
-	     (handler-case 
-		 (let ((result (funcall fn)))
-		   (cl-store:store (list (get-output-stream-string out) result)
+ 		  (*standard-input* in)
+ 		  (*standard-output* out)
+ 		  (*error-output* out)
+ 		  (*trace-output* out)
+ 		  (*terminal-io* tw)
+ 		  (*debug-io* tw)
+ 		  (*query-io* tw)
+		  ) 
+
+	     (let* ((output-pathname (format nil "/tmp/pid.~d" (nix:getpid)))
+		    (*is-slave* t))
+
+	       (handler-case 
+		   (let ((result (funcall fn)))
+		     (cl-store:store (list (get-output-stream-string out) result)
+				     output-pathname)
+	       (nix:exit 0)
+
+		     (close tw) (close in) (close out)
+		     (nix:exit 0))
+		 (error (e)
+		   (cl-store:store (list (get-output-stream-string out) e)
 				   output-pathname)
 		   (close tw) (close in) (close out)
-		   (nix:exit 0))
-	       (error (e)
-		 (cl-store:store (list (get-output-stream-string out) e)
-				 output-pathname)
-		   (close tw) (close in) (close out)
-		   (nix:exit 1)))))
+		   (nix:exit 1))))))
 	  (t
 	   (setf (gethash pid *futures-awaiting-status*)
 		 (make-instance 'future :pid pid))))))
