@@ -16,9 +16,11 @@ When wait comes around and reaps them, we remove them from the table"
 
 
 (defun fork ()
-  "We need to handle for differently in different lisps"
+  "We need to handle fork differently in different lisps or else they get really confused"
   #+sbcl
   (return-from fork (sb-posix:fork))
+  #+allegro
+  (return-from fork (excl.osi:fork))
   (nix:fork))
   
 (defclass future ()
