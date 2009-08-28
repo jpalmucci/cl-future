@@ -186,13 +186,11 @@ evaluated values. Blocks if a future is still running."
                      (push e cur-chunk)
                      (incf cur-count)))
               (cond ((>= cur-count chunk-size)
-                     (jp:pvalues cur-count chunk-size)
                      (push cur-chunk chunks)
                      (setq cur-chunk nil
                            cur-count (- cur-count chunk-size)))))
            (cond (cur-chunk
                   (push cur-chunk chunks)))
-           (jp:pvalues chunk-size chunks)
 
            ;;evaluate the chunks in child processes
            (let ((results (get-future-value 
